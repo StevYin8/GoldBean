@@ -203,8 +203,17 @@ struct OverviewView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical)
             } else {
-                ForEach(Array(goldRecords.prefix(3)), id: \.id) { record in
-                    RecentRecordRow(record: record)
+                ForEach(Array(goldRecords.prefix(3).enumerated()), id: \.element.id) { index, record in
+                    VStack(spacing: 0) {
+                        RecentRecordRow(record: record)
+                        
+                        // 添加分割线，但不在最后一条记录后面添加
+                        if index < goldRecords.prefix(3).count - 1 {
+                            Divider()
+                                .background(Color(.systemGray5))
+                                .padding(.horizontal, 0)
+                        }
+                    }
                 }
             }
         }
@@ -252,6 +261,6 @@ struct OverviewView: View {
                     .foregroundColor(profitLoss >= 0 ? .green : .red)
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 12)
     }
 } 
