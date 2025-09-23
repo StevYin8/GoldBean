@@ -1,0 +1,100 @@
+import Foundation
+import Combine
+
+class GoldPriceService: ObservableObject {
+    static let shared = GoldPriceService()
+    
+    @Published var currentPrice: Double = 600.0 // 默认价格，后续从API获取
+    @Published var lastUpdated: Date = Date()
+    @Published var isLoading: Bool = false
+    @Published var errorMessage: String?
+    
+    private var cancellables = Set<AnyCancellable>()
+    private let userDefaults = UserDefaults.standard
+    
+    private let apiKey = "YOUR_API_KEY" // 需要替换为真实的API Key
+    private let baseURL = "https://api.metals.live/v1/spot/gold"
+    
+    init() {
+        loadCachedPrice()
+        fetchGoldPrice()
+    }
+    
+    // 从本地缓存加载价格
+    private func loadCachedPrice() {
+        if let cachedPrice = userDefaults.object(forKey: "lastGoldPrice") as? Double,
+           let cachedDate = userDefaults.object(forKey: "lastGoldPriceDate") as? Date {
+            self.currentPrice = cachedPrice
+            self.lastUpdated = cachedDate
+        }
+    }
+    
+    // 缓存价格到本地
+    private func cachePrice(_ price: Double, date: Date) {
+        userDefaults.set(price, forKey: "lastGoldPrice")
+        userDefaults.set(date, forKey: "lastGoldPriceDate")
+    }
+    
+    // 获取黄金价格
+    func fetchGoldPrice() {
+        isLoading = true
+        errorMessage = nil
+        
+        // 模拟API调用，实际项目中需要使用真实的API
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            // 模拟价格波动
+            let basePrice = 600.0
+            let variation = Double.random(in: -20...20)
+            let newPrice = basePrice + variation
+            
+            self.currentPrice = newPrice
+            self.lastUpdated = Date()
+            self.isLoading = false
+            
+            self.cachePrice(newPrice, date: Date())
+        }
+        
+        // 真实API调用的示例代码
+        /*
+        guard let url = URL(string: baseURL) else {
+            self.errorMessage = "无效的API地址"
+            self.isLoading = false
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTaskPublisher(for: request)
+            .map(\.data)
+            .decode(type: GoldPrice.self, decoder: JSONDecoder())
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { completion in
+                    self.isLoading = false
+                    if case .failure(let error) = completion {
+                        self.errorMessage = "获取价格失败: \(error.localizedDescription)"
+                    }
+                },
+                receiveValue: { goldPrice in
+                    self.currentPrice = goldPrice.cnyPerGram
+                    self.lastUpdated = Date()
+                    self.cachePrice(goldPrice.cnyPerGram, date: Date())
+                }
+            )
+            .store(in: &cancellables)
+        */
+    }
+    
+    // 格式化价格显示
+    func formattedPrice() -> String {
+        return String(format: "¥%.2f/克", currentPrice)
+    }
+    
+    // 格式化更新时间
+    func formattedLastUpdated() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM-dd HH:mm"
+        return "更新于: " + formatter.string(from: lastUpdated)
+    }
+} 
