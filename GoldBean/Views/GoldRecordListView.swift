@@ -9,6 +9,8 @@ struct GoldRecordListView: View {
         sortDescriptors: [NSSortDescriptor(keyPath: \GoldRecord.purchaseDate, ascending: false)]
     ) private var goldRecords: FetchedResults<GoldRecord>
     
+    @State private var refreshTrigger = UUID() // 用于强制刷新
+    
     @State private var showingAddRecord = false
     @State private var searchText = ""
     @State private var selectedRecord: GoldRecord?
@@ -34,6 +36,7 @@ struct GoldRecordListView: View {
                         LazyVStack(spacing: 16) {
                             ForEach(filteredRecords, id: \.id) { record in
                                 GoldRecordCard(record: record)
+                                    .id("\(record.id)-\(record.updatedAt.timeIntervalSince1970)-\(record.notes ?? "")") // 确保备注变化时重新渲染
                                     .onTapGesture {
                                         selectedRecord = record
                                     }
@@ -181,13 +184,13 @@ struct GoldRecordListView: View {
                 }
             }
             
-            // 备注信息
-            if let notes = record.notes, !notes.isEmpty {
+            // 备注信息 - 确保动态响应notes变化
+            if let notes = record.notes, !notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 HStack(spacing: 6) {
                     Image(systemName: "note.text")
                         .font(.caption)
                         .foregroundColor(.orange)
-                    Text(notes)
+                    Text(notes.trimmingCharacters(in: .whitespacesAndNewlines))
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(2)

@@ -50,17 +50,9 @@ struct SettingsView: View {
                         }
                         .disabled(!goldPriceService.canManualRefresh())
                         
-                        if goldPriceService.isLoading {
-                            HStack {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                                Text("正在更新...")
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        
-                        // 显示错误消息（包括今日已更新提示）
-                        if let errorMessage = goldPriceService.errorMessage {
+                        // 显示错误消息（排除今日已更新提示，因为会显示弹窗）
+                        if let errorMessage = goldPriceService.errorMessage,
+                           errorMessage != "今日已更新，确认重新获取？" {
                             HStack {
                                 Image(systemName: "info.circle")
                                     .foregroundColor(.blue)

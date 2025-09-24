@@ -68,7 +68,7 @@ class NotificationManager: NSObject, ObservableObject {
         
         let content = UNMutableNotificationContent()
         content.title = "📈 今日金价更新"
-        content.body = "正在为您获取最新金价..."
+        content.body = "您黄金的价值已更新，快来查看吧！"
         content.sound = .default
         content.badge = 1
         

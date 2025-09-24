@@ -140,6 +140,7 @@ struct EditGoldRecordView: View {
         record.purchasePrice = totalPrice
         record.purchaseDate = purchaseDate
         record.notes = notes.isEmpty ? nil : notes
+        record.updatedAt = Date() // 确保updatedAt被更新，触发SwiftUI刷新
         
         CoreDataManager.shared.updateGoldRecord(record)
         

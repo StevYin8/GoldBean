@@ -78,9 +78,13 @@ class CoreDataManager: ObservableObject {
     
     func updateGoldRecord(_ record: GoldRecord) {
         record.updatedAt = Date()
+        
+        // 确保Core Data检测到变化
+        context.refresh(record, mergeChanges: true)
+        
         save()
         hasChanges = true
-        print("📝 更新记录: \(record.name ?? "未命名")")
+        print("📝 更新记录: \(record.name ?? "未命名")，备注: \(record.notes ?? "无")")
     }
     
     func fetchAllGoldRecords() -> [GoldRecord] {

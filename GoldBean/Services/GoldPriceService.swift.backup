@@ -95,6 +95,6 @@ class GoldPriceService: ObservableObject {
     func formattedLastUpdated() -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MM-dd HH:mm"
-        return "更新于: " + formatter.string(from: lastUpdated)
+        return formatter.string(from: lastUpdated)
     }
 } 

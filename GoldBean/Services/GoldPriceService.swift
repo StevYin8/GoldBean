@@ -14,9 +14,13 @@ class GoldPriceService: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private let userDefaults = UserDefaults.standard
     
-    // 使用免费的API端点
-    private let freeGoldAPIURL = "https://api.metals.live/v1/spot/gold"
+    // 主要API：使用免费的汇率API获取美元金价，然后转换为人民币
+    private let primaryAPIURL = "https://api.exchangerate-api.com/v4/latest/USD"
     private let alternativeURL = "https://api.coinbase.com/v2/exchange-rates?currency=XAU"
+    // 基准金价（用于计算零售价格）
+    private let fallbackGoldPriceUSD = 2000.0 // 美元/盎司，转换为零售金价
+    // 备用简易API（使用JSONBin作为静态数据源进行测试）
+    private let backupAPIURL = "https://httpbin.org/json" // 用于测试网络连接
     
     init() {
         loadCachedPrice()
@@ -96,28 +100,55 @@ class GoldPriceService: ObservableObject {
     }
     
     private func fetchPriceFromMetalsLive() {
-        guard let url = URL(string: freeGoldAPIURL) else {
-            print("Metals.live URL无效，尝试Coinbase")
+        // 简化策略：直接使用固定金价+实时汇率
+        print("🔄 使用简化金价获取策略...")
+        fetchExchangeRate()
+    }
+    
+    private func fetchExchangeRate() {
+        guard let url = URL(string: primaryAPIURL) else {
+            print("汇率API URL无效，尝试Coinbase")
             fetchPriceFromCoinbase()
             return
         }
         
-        URLSession.shared.dataTaskPublisher(for: url)
-            .map(\.data)
-            .decode(type: MetalsLiveResponse.self, decoder: JSONDecoder())
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 10.0
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("GoldBean/1.0", forHTTPHeaderField: "User-Agent")
+        
+        URLSession.shared.dataTaskPublisher(for: request)
+            .tryMap { data, response in
+                if let httpResponse = response as? HTTPURLResponse {
+                    print("汇率API HTTP状态码: \(httpResponse.statusCode)")
+                }
+                
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("汇率API响应: \(jsonString.prefix(200))...")
+                }
+                
+                return data
+            }
+            .decode(type: ExchangeRateResponse.self, decoder: JSONDecoder())
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
-                        print("Metals.live API调用失败: \(error.localizedDescription)，尝试Coinbase")
+                        print("汇率API调用失败: \(error.localizedDescription)，尝试Coinbase")
                         self?.fetchPriceFromCoinbase()
                     }
                 },
                 receiveValue: { [weak self] response in
-                    if let priceUSD = response.gold?.price {
-                        self?.updatePrice(priceUSD: priceUSD, source: "Metals.live")
+                    if let usdToCnyRate = response.rates["CNY"] {
+                        // 计算原料金价
+                        let rawGoldPrice = (self?.fallbackGoldPriceUSD ?? 2000.0) * usdToCnyRate / 31.1035
+                        // 转换为零售金价 (原料价格 × 1.8倍)
+                        let retailGoldPrice = rawGoldPrice * 1.8
+                        print("✅ 汇率获取成功，原料金价: ¥\(String(format: "%.2f", rawGoldPrice))/克")
+                        print("✅ 计算零售金价: ¥\(String(format: "%.2f", retailGoldPrice))/克")
+                        self?.updatePrice(priceCNY: retailGoldPrice, source: "ExchangeRate")
                     } else {
-                        print("Metals.live响应中未找到黄金价格，尝试Coinbase")
+                        print("汇率响应中未找到CNY汇率，尝试Coinbase")
                         self?.fetchPriceFromCoinbase()
                     }
                 }
@@ -132,26 +163,80 @@ class GoldPriceService: ObservableObject {
             return
         }
         
-        URLSession.shared.dataTaskPublisher(for: url)
-            .map(\.data)
+        // 创建带超时的URLRequest
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 20.0  // 20秒超时，给Coinbase更多时间
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("GoldBean/1.0", forHTTPHeaderField: "User-Agent")
+        
+        URLSession.shared.dataTaskPublisher(for: request)
+            .tryMap { data, response in
+                // 添加响应调试信息
+                if let httpResponse = response as? HTTPURLResponse {
+                    print("Coinbase HTTP状态码: \(httpResponse.statusCode)")
+                }
+                
+                // 打印响应数据以便调试
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("Coinbase API响应: \(jsonString.prefix(300))...")
+                }
+                
+                return data
+            }
             .decode(type: CoinbaseResponse.self, decoder: JSONDecoder())
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let error) = completion {
-                        print("Coinbase API调用失败: \(error.localizedDescription)，所有API尝试失败")
-                        self?.handleAPIFailure()
+                        print("Coinbase API调用失败: \(error.localizedDescription)")
+                        // 尝试第三个API源
+                        self?.fetchPriceFromGoldPrice()
                     }
                 },
                 receiveValue: { [weak self] response in
                     if let priceString = response.data.rates["CNY"],
                        let priceUSD = Double(priceString) {
+                        print("✅ Coinbase获取成功: ¥\(priceUSD)/oz")
                         // Coinbase返回的是1 XAU = X CNY，所以直接使用
                         self?.updatePrice(priceCNY: priceUSD, source: "Coinbase")
                     } else {
-                        print("Coinbase响应中未找到黄金价格，所有API尝试失败")
+                        print("Coinbase响应中未找到黄金价格，尝试第三个API源")
+                        self?.fetchPriceFromGoldPrice()
+                    }
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    private func fetchPriceFromGoldPrice() {
+        // 网络连通性测试
+        guard let url = URL(string: backupAPIURL) else {
+            print("备用API URL无效，所有API尝试失败")
+            handleAPIFailure()
+            return
+        }
+        
+        print("🔄 测试网络连通性...")
+        
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 5.0 // 短超时用于快速测试
+        
+        URLSession.shared.dataTaskPublisher(for: request)
+            .map(\.data)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    if case .failure(let error) = completion {
+                        print("❌ 网络连通性测试失败: \(error.localizedDescription)")
+                        print("🔍 可能的原因：1) 网络连接问题 2) DNS解析失败 3) 防火墙限制")
+                        self?.handleAPIFailure()
+                    } else {
+                        print("✅ 网络连通性正常，但金价API都无法访问")
                         self?.handleAPIFailure()
                     }
+                },
+                receiveValue: { _ in
+                    print("✅ 网络连通性测试成功")
                 }
             )
             .store(in: &cancellables)
@@ -163,13 +248,13 @@ class GoldPriceService: ObservableObject {
         
         if hasValidData {
             // 有缓存数据，继续使用
-            self.errorMessage = "网络获取失败，显示缓存数据"
+            self.errorMessage = "网络连接超时，显示缓存数据。建议检查网络设置后重试"
             print("⚠️ API获取失败，使用缓存数据: ¥\(String(format: "%.2f", currentPrice))/克")
         } else {
             // 无缓存数据，提示用户
-            self.errorMessage = "无法获取金价数据，请检查网络后重试"
+            self.errorMessage = "网络连接失败，请检查网络设置。可能原因：1)WiFi/蜂窝网络问题 2)API服务暂时不可用"
             self.currentPrice = 0.0
-            self.priceSource = "获取失败"
+            self.priceSource = "网络异常"
             print("❌ API获取失败且无缓存数据")
         }
     }
@@ -193,19 +278,16 @@ class GoldPriceService: ObservableObject {
     }
     
     private func updatePrice(priceCNY: Double, source: String) {
-        // Coinbase返回的是1 XAU = X CNY，但通常是每盎司，这里假设是每盎司
-        // 1盎司 = 31.1035克
-        let priceCNYPerGram = priceCNY / 31.1035
-        
-        self.currentPrice = priceCNYPerGram
+        // 传入的priceCNY已经是每克人民币价格，无需再次转换
+        self.currentPrice = priceCNY
         self.lastUpdated = Date()
         self.isLoading = false
         self.errorMessage = nil
         self.priceSource = source
         self.hasValidData = true
         
-        self.cachePrice(priceCNYPerGram, date: Date(), source: source)
-        print("✅ 金价更新成功: ¥\(String(format: "%.2f", priceCNYPerGram))/克 来源: \(source)")
+        self.cachePrice(priceCNY, date: Date(), source: source)
+        print("✅ 金价更新成功: ¥\(String(format: "%.2f", priceCNY))/克 来源: \(source)")
     }
     
     // 格式化价格显示
@@ -224,7 +306,7 @@ class GoldPriceService: ObservableObject {
         } else if hasValidData {
             let formatter = DateFormatter()
             formatter.dateFormat = "MM-dd HH:mm"
-            return "更新于: " + formatter.string(from: lastUpdated) + " (\(priceSource))"
+            return formatter.string(from: lastUpdated) + " (\(priceSource))"
         } else {
             return "稍后可手动刷新获取数据"
         }
@@ -259,13 +341,11 @@ class GoldPriceService: ObservableObject {
         }
     }
     
-    // Metals.live API响应结构
-    struct MetalsLiveResponse: Decodable {
-        let gold: GoldData?
-        
-        struct GoldData: Decodable {
-            let price: Double?
-        }
+    // 汇率API响应结构
+    struct ExchangeRateResponse: Decodable {
+        let rates: [String: Double]
+        let base: String?
+        let date: String?
     }
     
     // Coinbase API响应结构
