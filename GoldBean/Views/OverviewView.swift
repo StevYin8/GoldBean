@@ -36,6 +36,9 @@ struct OverviewView: View {
                     // 当前金价卡片
                     CurrentPriceCard()
                     
+                    // 金价趋势图卡片
+                    GoldPriceTrendChart()
+                    
                     // 投资概览卡片
                     InvestmentOverviewCard()
                     
@@ -92,7 +95,7 @@ struct OverviewView: View {
                         .font(.caption2)
                         .foregroundColor(.blue.opacity(0.8))
                 } else if goldPriceService.hasValidData {
-                    Text("下拉刷新价格")
+                    Text("查看下方趋势图 • 下拉刷新价格")
                         .font(.caption2)
                         .foregroundColor(.secondary.opacity(0.7))
                 } else {

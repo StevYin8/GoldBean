@@ -6,6 +6,7 @@ struct SettingsView: View {
     @AppStorage("currencyUnit") private var currencyUnit: String = "CNY"
     @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = true
     @AppStorage("apiKey") private var apiKey: String = ""
+    @AppStorage("useRealData") private var useRealData: Bool = true
     
     @State private var showingAPIKeyAlert = false
     @State private var tempAPIKey = ""
@@ -108,6 +109,66 @@ struct SettingsView: View {
                                 }
                             }
                         }
+                    }
+                    
+                    // 数据源设置模块
+                    SettingsCard(
+                        icon: "cloud.fill",
+                        title: "数据源设置",
+                        iconColor: .purple
+                    ) {
+                        Toggle("使用真实金价数据", isOn: $useRealData)
+                            .onChange(of: useRealData) { newValue in
+                                // 当用户切换数据源时，清除缓存并重新加载
+                                goldPriceService.clearHistoryCache()
+                                print(newValue ? "✅ 已切换到真实数据源" : "⚠️ 已切换到模拟数据源")
+                            }
+                        
+                        Button("重新生成历史数据") {
+                            goldPriceService.clearHistoryCache()
+                            // 触发重新生成数据（通过刷新当前选中的时间范围）
+                        }
+                        .foregroundColor(.orange)
+                        .font(.caption)
+                        
+                                                    VStack(alignment: .leading, spacing: 8) {
+                                if useRealData {
+                                    HStack {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(.green)
+                                            .font(.caption)
+                                        Text("真实数据源：中国黄金集团官网")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    Text("直接从中国黄金集团官网实时抓取基础金价（www.chnau99999.com），数据100%真实")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                    
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "info.circle.fill")
+                                            .foregroundColor(.blue)
+                                            .font(.caption2)
+                                        Text("无需API Key，每3分钟自动更新")
+                                            .font(.caption2)
+                                            .foregroundColor(.blue)
+                                    }
+                                    .padding(.top, 4)
+                                } else {
+                                    HStack {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .foregroundColor(.orange)
+                                            .font(.caption)
+                                        Text("模拟数据源：仅供演示")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    Text("使用算法生成的模拟历史价格数据，仅供功能演示")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .padding(.top, 8)
                     }
                     
                     // 关于模块
