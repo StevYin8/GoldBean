@@ -20,6 +20,9 @@ class GoldPriceService: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private let userDefaults = UserDefaults.standard
     
+    // Supabase 服务实例
+    private let supabaseService = SupabaseGoldService.shared
+    
     // 中国金价数据源 - 中国黄金集团官网（无需API Key）
     private let chinaGoldOfficialURL = "https://www.chnau99999.com/page/goldPrice"
     
@@ -317,6 +320,15 @@ class GoldPriceService: ObservableObject {
         }
     }
     
+    // 获取缓存的历史价格数据（返回数组）
+    private func getCachedPriceHistory() -> [GoldPriceHistory] {
+        if let data = userDefaults.data(forKey: "cachedPriceHistory"),
+           let cachedHistory = try? JSONDecoder().decode([GoldPriceHistory].self, from: data) {
+            return cachedHistory
+        }
+        return []
+    }
+    
     // 缓存历史价格数据
     private func cachePriceHistory(_ history: [GoldPriceHistory]) {
         if let data = try? JSONEncoder().encode(history) {
@@ -337,8 +349,9 @@ class GoldPriceService: ObservableObject {
         fetchRealHistoryData(timeRange: timeRange)
     }
     
-    // 获取真实历史数据
+    // 获取真实历史数据（仅从 Supabase 获取）
     private func fetchRealHistoryData(timeRange: ChartTimeRange) {
+        
         // 检查用户是否选择使用真实数据
         let useRealData = userDefaults.bool(forKey: "useRealData")
         
@@ -356,24 +369,45 @@ class GoldPriceService: ObservableObject {
             return
         }
         
-        // 新策略：使用当前真实金价作为基准生成历史数据
-        let currentRealPrice = currentPrice > 0 ? currentPrice : 900.0 // 使用当前价格或合理默认值
-        print("✅ 使用当前真实中国金价: ¥\(String(format: "%.2f", currentRealPrice))/克")
+        // 从 Supabase 获取真实历史数据
+        print("📊 从 Supabase 获取真实历史数据...")
         
-        let history = generateRealisticHistory(
-            basePrice: currentRealPrice,
-            timeRange: timeRange,
-            source: "基于中国黄金集团数据"
-        )
+        let endDate = Date()
+        let startDate = Calendar.current.date(byAdding: .day, value: -timeRange.days, to: endDate) ?? endDate
         
-                 DispatchQueue.main.async { [weak self] in
-             self?.priceHistory = history
-             self?.updateTrendIndicators(for: timeRange)
-             self?.cachePriceHistory(history)
-             self?.isLoadingHistory = false
-             print("✅ 历史价格数据生成完成: \(history.count) 条记录")
-         }
+        supabaseService.fetchHistoricalPricesPublisher(startDate: startDate, endDate: endDate)
+            .timeout(.seconds(30), scheduler: DispatchQueue.main)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] completion in
+                self?.isLoadingHistory = false
+                
+                switch completion {
+                case .finished:
+                    print("✅ Supabase 数据获取流程完成")
+                case .failure(let error):
+                    print("❌ Supabase 获取失败: \(error.localizedDescription)")
+                    // 清空数据并提示用户
+                    self?.priceHistory = []
+                    self?.errorMessage = "暂时无法获取历史数据，请稍后重试"
+                }
+            } receiveValue: { [weak self] history in
+                guard let self = self else { return }
+                
+                if history.isEmpty {
+                    print("⚠️ Supabase 数据库中暂无数据")
+                    self.priceHistory = []
+                    self.errorMessage = "历史数据暂时不可用，请稍后重试"
+                } else {
+                    print("✅ 成功获取 \(history.count) 条 Supabase 历史数据")
+                    self.priceHistory = history
+                    self.updateTrendIndicators(for: timeRange)
+                    self.cachePriceHistory(history)
+                    self.errorMessage = nil
+                }
+            }
+            .store(in: &cancellables)
     }
+    
     
     
     // 生成模拟历史数据

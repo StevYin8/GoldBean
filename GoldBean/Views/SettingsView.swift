@@ -121,55 +121,64 @@ struct SettingsView: View {
                             .onChange(of: useRealData) { newValue in
                                 // 当用户切换数据源时，清除缓存并重新加载
                                 goldPriceService.clearHistoryCache()
+                                CoreDataManager.shared.clearHistoricalPriceCache()
                                 print(newValue ? "✅ 已切换到真实数据源" : "⚠️ 已切换到模拟数据源")
                             }
                         
-                        Button("重新生成历史数据") {
-                            goldPriceService.clearHistoryCache()
-                            // 触发重新生成数据（通过刷新当前选中的时间范围）
-                        }
-                        .foregroundColor(.orange)
-                        .font(.caption)
-                        
-                                                    VStack(alignment: .leading, spacing: 8) {
-                                if useRealData {
-                                    HStack {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .foregroundColor(.green)
-                                            .font(.caption)
-                                        Text("真实数据源：中国黄金集团官网")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    Text("直接从中国黄金集团官网实时抓取基础金价（www.chnau99999.com），数据100%真实")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                    
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "info.circle.fill")
-                                            .foregroundColor(.blue)
-                                            .font(.caption2)
-                                        Text("无需API Key，每3分钟自动更新")
-                                            .font(.caption2)
-                                            .foregroundColor(.blue)
-                                    }
-                                    .padding(.top, 4)
-                                } else {
-                                    HStack {
-                                        Image(systemName: "exclamationmark.triangle.fill")
-                                            .foregroundColor(.orange)
-                                            .font(.caption)
-                                        Text("模拟数据源：仅供演示")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    Text("使用算法生成的模拟历史价格数据，仅供功能演示")
-                                        .font(.caption2)
+                        VStack(alignment: .leading, spacing: 8) {
+                            if useRealData {
+                                HStack {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                        .font(.caption)
+                                    Text("当前金价：中国黄金集团官网")
+                                        .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
+                                Text("直接从中国黄金集团官网实时抓取基础金价，数据100%真实")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                
+                                HStack {
+                                    Image(systemName: "chart.line.uptrend.xyaxis")
+                                        .foregroundColor(.blue)
+                                        .font(.caption)
+                                    Text("历史趋势：金融模型推算")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                Text("基于真实当前金价，使用金融市场规律生成合理的历史趋势")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                
+                                HStack(spacing: 4) {
+                                    Image(systemName: "info.circle.fill")
+                                        .foregroundColor(.blue)
+                                        .font(.caption2)
+                                    Text("历史数据自动缓存，下次查看更快")
+                                        .font(.caption2)
+                                        .foregroundColor(.blue)
+                                }
+                                .padding(.top, 4)
+                            } else {
+                                HStack {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundColor(.orange)
+                                        .font(.caption)
+                                    Text("模拟数据源：仅供演示")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                Text("使用算法生成的模拟历史价格数据，仅供功能演示")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
                             }
-                            .padding(.top, 8)
+                        }
+                        .padding(.top, 8)
                     }
+                    
+                    // Supabase 数据统计模块
+                    SupabaseDataStatsCard()
                     
                     // 关于模块
                     SettingsCard(
@@ -324,6 +333,242 @@ struct SettingsView: View {
             return .red
         default:
             return .orange
+        }
+    }
+    
+    // 获取历史数据缓存状态
+    private func getHistoricalCacheStatus() -> String {
+        let count = CoreDataManager.shared.getHistoricalPriceCount()
+        if count == 0 {
+            return "无缓存"
+        } else if count < 100 {
+            return "部分缓存"
+        } else {
+            return "已缓存"
+        }
+    }
+    
+    // 格式化日期
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
+    }
+}
+
+// MARK: - Supabase 数据统计卡片
+struct SupabaseDataStatsCard: View {
+    @State private var isLoading = false
+    @State private var totalRecords = 0
+    @State private var earliestDate: String?
+    @State private var latestDate: String?
+    @State private var connectionStatus = "未测试"
+    @State private var statusColor: Color = .gray
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // 标题栏
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.cyan)
+                    .frame(width: 24, height: 24)
+                    .overlay(
+                        Image(systemName: "cloud.fill")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.white)
+                    )
+                
+                Text("Supabase 数据统计")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                }
+            }
+            
+            // 内容区域
+            VStack(spacing: 12) {
+                // 连接状态
+                HStack {
+                    Text("连接状态")
+                    Spacer()
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(statusColor)
+                            .frame(width: 8, height: 8)
+                        Text(connectionStatus)
+                            .foregroundColor(statusColor)
+                            .fontWeight(.medium)
+                    }
+                }
+                
+                if totalRecords > 0 {
+                    Divider()
+                    
+                    // 总记录数
+                    HStack {
+                        Image(systemName: "chart.bar.fill")
+                            .foregroundColor(.cyan)
+                        Text("总记录数")
+                        Spacer()
+                        Text("~\(totalRecords) 天")
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    // 最早日期
+                    if let earliest = earliestDate {
+                        HStack {
+                            Image(systemName: "calendar")
+                                .foregroundColor(.cyan)
+                            Text("最早日期")
+                            Spacer()
+                            Text(earliest)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    // 最新日期
+                    if let latest = latestDate {
+                        HStack {
+                            Image(systemName: "calendar.badge.clock")
+                                .foregroundColor(.cyan)
+                            Text("最新日期")
+                            Spacer()
+                            Text(latest)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    // 数据跨度
+                    HStack {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .foregroundColor(.cyan)
+                        Text("数据跨度")
+                        Spacer()
+                        Text("\(String(format: "%.1f", Double(totalRecords) / 365.0)) 年")
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Divider()
+                
+                // 操作按钮
+                HStack(spacing: 12) {
+                    Button(action: {
+                        checkDataAvailability()
+                    }) {
+                        HStack {
+                            Image(systemName: "arrow.clockwise")
+                            Text("刷新统计")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(Color.cyan.opacity(0.1))
+                        .foregroundColor(.cyan)
+                        .cornerRadius(8)
+                    }
+                    .disabled(isLoading)
+                    
+                    Button(action: {
+                        testConnection()
+                    }) {
+                        HStack {
+                            Image(systemName: "network")
+                            Text("测试连接")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(Color.blue.opacity(0.1))
+                        .foregroundColor(.blue)
+                        .cornerRadius(8)
+                    }
+                    .disabled(isLoading)
+                }
+                
+                // 提示信息
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundColor(.cyan)
+                            .font(.caption2)
+                        Text("历史价格数据由 Supabase 云端提供")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                            .font(.caption2)
+                        Text("包含真实 USD/CNY 汇率和黄金价格")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(.top, 4)
+            }
+        }
+        .padding(16)
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color(.systemGray5), lineWidth: 1)
+        )
+        .onAppear {
+            // 初始化时自动检查一次
+            checkDataAvailability()
+        }
+    }
+    
+    private func checkDataAvailability() {
+        isLoading = true
+        
+        Task {
+            let stats = await SupabaseGoldService.shared.checkDataAvailability()
+            
+            await MainActor.run {
+                totalRecords = stats.totalRecords
+                earliestDate = stats.earliestDate
+                latestDate = stats.latestDate
+                
+                if stats.totalRecords > 0 {
+                    connectionStatus = "已连接"
+                    statusColor = .green
+                } else {
+                    connectionStatus = "无数据"
+                    statusColor = .orange
+                }
+                
+                isLoading = false
+            }
+        }
+    }
+    
+    private func testConnection() {
+        isLoading = true
+        connectionStatus = "测试中..."
+        statusColor = .gray
+        
+        Task {
+            let success = await SupabaseGoldService.shared.testConnection()
+            
+            await MainActor.run {
+                if success {
+                    connectionStatus = "连接成功"
+                    statusColor = .green
+                } else {
+                    connectionStatus = "连接失败"
+                    statusColor = .red
+                }
+                isLoading = false
+            }
         }
     }
 }
