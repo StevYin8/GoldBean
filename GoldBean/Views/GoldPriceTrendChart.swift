@@ -273,7 +273,7 @@ struct GridLinesView: View {
         case .oneYear: return 6
         case .threeYears: return 4
         case .fiveYears: return 6
-        case .tenYears: return 6
+        // case .tenYears: return 6
         }
     }
 }
@@ -356,7 +356,7 @@ struct XAxisLabelsView: View {
         case .oneYear: return 6
         case .threeYears: return 4
         case .fiveYears: return 6
-        case .tenYears: return 6
+        // case .tenYears: return 6
         }
     }
     
@@ -371,8 +371,8 @@ struct XAxisLabelsView: View {
             formatter.dateFormat = "yyyy"
         case .fiveYears:
             formatter.dateFormat = "yyyy"
-        case .tenYears:
-            formatter.dateFormat = "yyyy"
+        // case .tenYears:
+        //     formatter.dateFormat = "yyyy"
         }
         return formatter
     }

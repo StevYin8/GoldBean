@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>需要访问您的照片库以保存和查看黄金饰品照片</string>
+	<key>NSCameraUsageDescription</key>
+	<string>需要使用相机拍摄黄金饰品照片</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>需要将黄金饰品照片保存到您的照片库</string>
+</dict>
+</plist>
+
+

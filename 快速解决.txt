@@ -1,0 +1,33 @@
+🔧 Info.plist 冲突 - 快速解决
+
+错误：Multiple commands produce Info.plist
+
+✅ 已清理缓存
+
+立即操作（1分钟）：
+
+1. 打开 Xcode
+   open GoldBean.xcodeproj
+
+2. 移除重复引用
+   - 点击项目 → TARGETS → GoldBean
+   - Build Phases 标签
+   - 展开 "Copy Bundle Resources"
+   - 找到 Info.plist，点击 - 删除
+
+3. 确认配置
+   - Build Settings 标签
+   - 搜索 info.plist
+   - Info.plist File = GoldBean/Info.plist
+
+4. 清理并运行
+   - Shift + Cmd + K
+   - Cmd + R
+
+完成！🎉
+
+如果还失败，查看：解决Info.plist冲突-简易步骤.md
+
+
+
+

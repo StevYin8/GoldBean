@@ -12,6 +12,7 @@ struct EditGoldRecordView: View {
     @State private var purchaseDate: Date = Date()
     @State private var notes: String = ""
     @State private var isPricePerGram: Bool = false
+    @State private var selectedImage: UIImage? = nil
     
     @State private var showingAlert = false
     @State private var alertMessage = ""
@@ -53,6 +54,10 @@ struct EditGoldRecordView: View {
                             }
                         }
                     }
+                }
+                
+                Section(header: Text("照片")) {
+                    ImageSelectionView(selectedImage: $selectedImage)
                 }
                 
                 Section(header: Text("备注")) {
@@ -114,6 +119,7 @@ struct EditGoldRecordView: View {
         purchasePrice = String(record.purchasePrice)
         purchaseDate = record.purchaseDate
         notes = record.notes ?? ""
+        selectedImage = record.image // 加载已有图片
         isPricePerGram = false // 默认显示总价
     }
     
@@ -140,6 +146,7 @@ struct EditGoldRecordView: View {
         record.purchasePrice = totalPrice
         record.purchaseDate = purchaseDate
         record.notes = notes.isEmpty ? nil : notes
+        record.image = selectedImage // 更新图片
         record.updatedAt = Date() // 确保updatedAt被更新，触发SwiftUI刷新
         
         CoreDataManager.shared.updateGoldRecord(record)

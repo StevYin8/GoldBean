@@ -10,6 +10,7 @@ struct AddGoldRecordView: View {
     @State private var purchaseDate: Date = Date()
     @State private var notes: String = ""
     @State private var isPricePerGram: Bool = false
+    @State private var selectedImage: UIImage? = nil
     
     @State private var showingAlert = false
     @State private var alertMessage = ""
@@ -50,6 +51,10 @@ struct AddGoldRecordView: View {
                             }
                         }
                     }
+                }
+                
+                Section(header: Text("照片")) {
+                    ImageSelectionView(selectedImage: $selectedImage)
                 }
                 
                 Section(header: Text("备注")) {
@@ -104,7 +109,8 @@ struct AddGoldRecordView: View {
             weight: weightValue,
             purchasePrice: totalPrice,
             purchaseDate: purchaseDate,
-            notes: notes.isEmpty ? nil : notes
+            notes: notes.isEmpty ? nil : notes,
+            image: selectedImage
         )
         
         dismiss()

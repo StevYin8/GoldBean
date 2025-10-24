@@ -20,7 +20,7 @@ enum ChartTimeRange: String, CaseIterable {
     case oneYear = "1Y"
     case threeYears = "3Y"
     case fiveYears = "5Y"
-    case tenYears = "10Y"
+    // case tenYears = "10Y"
     
     var displayName: String {
         switch self {
@@ -28,7 +28,7 @@ enum ChartTimeRange: String, CaseIterable {
         case .oneYear: return "1年"
         case .threeYears: return "3年"
         case .fiveYears: return "5年"
-        case .tenYears: return "10年"
+        // case .tenYears: return "10年"
         }
     }
     
@@ -38,7 +38,7 @@ enum ChartTimeRange: String, CaseIterable {
         case .oneYear: return 365
         case .threeYears: return 365 * 3
         case .fiveYears: return 365 * 5
-        case .tenYears: return 365 * 10
+        // case .tenYears: return 365 * 10
         }
     }
 }

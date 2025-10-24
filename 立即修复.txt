@@ -1,0 +1,57 @@
+🔧 立即修复 - 5 分钟解决所有问题
+
+✅ 第一步：缓存已清理（完成）
+
+现在立即操作：
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. 打开 Xcode
+   open GoldBean.xcodeproj
+
+2. 重新解析包（关键！）
+   菜单栏：File → Packages → Reset Package Caches
+   等待完成
+   菜单栏：File → Packages → Resolve Package Versions
+   等待下载完成（右上角会显示进度）
+
+3. 链接 Supabase 到 Target（最重要！）
+   - 点击项目 GoldBean（蓝色图标）
+   - TARGETS → GoldBean
+   - General 标签
+   - 滚动到 "Frameworks, Libraries, and Embedded Content"
+   - 点击 + 按钮，依次添加：
+     ✅ Supabase
+     ✅ Auth
+     ✅ Storage
+     ✅ Functions
+     ✅ Realtime
+     ✅ PostgREST
+
+4. 移除 Info.plist 重复
+   - Build Phases 标签
+   - 展开 "Copy Bundle Resources"
+   - 找到 Info.plist（如果有）
+   - 选中它，点击 - 删除
+
+5. 确认配置
+   - Build Settings 标签
+   - 搜索 "info.plist"
+   - Info.plist File = GoldBean/Info.plist
+   - Generate Info.plist File = No
+
+6. 清理并运行
+   - Shift + Cmd + K
+   - Cmd + R
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+完成！应该能正常运行了 🎉
+
+如果还有问题，查看：完整修复方案.md
+
+
+
+
+
+

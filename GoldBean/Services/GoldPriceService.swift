@@ -451,7 +451,7 @@ class GoldPriceService: ObservableObject {
         case .oneYear: return 15
         case .threeYears: return 30
         case .fiveYears: return 50
-        case .tenYears: return 80
+        // case .tenYears: return 80
         }
     }
     
@@ -462,7 +462,7 @@ class GoldPriceService: ObservableObject {
         case .oneYear: return 12
         case .threeYears: return 20
         case .fiveYears: return 25
-        case .tenYears: return 30
+        // case .tenYears: return 30
         }
     }
     
@@ -473,7 +473,7 @@ class GoldPriceService: ObservableObject {
         case .oneYear: return 0.05
         case .threeYears: return 0.02
         case .fiveYears: return 0.01
-        case .tenYears: return 0.005
+        // case .tenYears: return 0.005
         }
     }
     
@@ -570,8 +570,8 @@ class GoldPriceService: ObservableObject {
             growthRate = 0.35  // 三年约35%增长
         case .fiveYears:
             growthRate = 0.65  // 五年约65%增长
-        case .tenYears:
-            growthRate = 1.20  // 十年约120%增长（翻倍多）
+        // case .tenYears:
+        //     growthRate = 1.20  // 十年约120%增长（翻倍多）
         }
         
         // 从历史价格增长到当前价格
@@ -596,7 +596,7 @@ class GoldPriceService: ObservableObject {
         case .oneYear: return 25
         case .threeYears: return 40
         case .fiveYears: return 50
-        case .tenYears: return 60  // 长期波动幅度更大
+        // case .tenYears: return 60  // 长期波动幅度更大
         }
     }
     

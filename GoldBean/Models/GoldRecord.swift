@@ -1,5 +1,6 @@
 import Foundation
 import CoreData
+import UIKit
 
 @objc(GoldRecord)
 public class GoldRecord: NSManagedObject {
@@ -20,6 +21,7 @@ extension GoldRecord {
     @NSManaged public var notes: String?
     @NSManaged public var createdAt: Date
     @NSManaged public var updatedAt: Date
+    @NSManaged public var imageData: Data? // 图片数据
     
     // 计算购买时单克价格
     var purchasePricePerGram: Double {
@@ -39,6 +41,29 @@ extension GoldRecord {
     // 计算盈亏百分比
     func profitLossPercentage(goldPrice: Double) -> Double {
         return purchasePrice > 0 ? (profitLoss(goldPrice: goldPrice) / purchasePrice) * 100 : 0
+    }
+    
+    // MARK: - 图片相关方法
+    
+    // 获取UIImage对象
+    var image: UIImage? {
+        get {
+            guard let data = imageData else { return nil }
+            return UIImage(data: data)
+        }
+        set {
+            if let image = newValue {
+                // 压缩图片以节省存储空间
+                imageData = image.jpegData(compressionQuality: 0.8)
+            } else {
+                imageData = nil
+            }
+        }
+    }
+    
+    // 检查是否有图片
+    var hasImage: Bool {
+        return imageData != nil
     }
 }
 

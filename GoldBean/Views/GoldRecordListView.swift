@@ -119,8 +119,21 @@ struct GoldRecordListView: View {
     @ViewBuilder
     private func GoldRecordCard(record: GoldRecord) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            // 顶部标题行
-            HStack {
+            // 顶部标题行（带图片）
+            HStack(alignment: .center, spacing: 12) {
+                // 图片缩略图（如果有）
+                if let image = record.image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 60, height: 60)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color(.systemGray4), lineWidth: 1)
+                        )
+                }
+                
                 VStack(alignment: .leading, spacing: 2) {
                     Text(record.name ?? "黄金首饰")
                         .font(.headline)
@@ -141,12 +154,12 @@ struct GoldRecordListView: View {
                     Text(String(format: "¥%.2f", profitLoss))
                         .font(.headline)
                         .fontWeight(.bold)
-                        .foregroundColor(profitLoss >= 0 ? .green : .red)
+                        .foregroundColor(profitLoss >= 0 ? .red : .green)
                     
                     Text(String(format: "%.2f%%", percentage))
                         .font(.caption)
                         .fontWeight(.medium)
-                        .foregroundColor(profitLoss >= 0 ? .green : .red)
+                        .foregroundColor(profitLoss >= 0 ? .red : .green)
                 }
             }
             

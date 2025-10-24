@@ -1,6 +1,7 @@
 import Foundation
 import CoreData
 import Combine
+import UIKit
 
 class CoreDataManager: ObservableObject {
     static let shared = CoreDataManager()
@@ -42,7 +43,7 @@ class CoreDataManager: ObservableObject {
         }
     }
     
-    func createGoldRecord(name: String?, weight: Double, purchasePrice: Double, purchaseDate: Date, notes: String?) -> GoldRecord {
+    func createGoldRecord(name: String?, weight: Double, purchasePrice: Double, purchaseDate: Date, notes: String?, image: UIImage? = nil) -> GoldRecord {
         // 确保使用正确的entity描述
         guard let entity = NSEntityDescription.entity(forEntityName: "GoldRecord", in: context) else {
             fatalError("Could not find entity description for GoldRecord")
@@ -61,6 +62,12 @@ class CoreDataManager: ObservableObject {
         record.purchasePrice = purchasePrice
         record.purchaseDate = purchaseDate
         record.notes = notes
+        
+        // 设置图片（如果有）
+        if let image = image {
+            record.image = image
+            print("📸 已添加图片到记录")
+        }
         
         print("�� 创建新记录: \(name ?? "未命名") - \(weight)克 - ¥\(purchasePrice)")
         

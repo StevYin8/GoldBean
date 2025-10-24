@@ -164,10 +164,10 @@ struct OverviewView: View {
                         Text(String(format: "¥%.2f", totalProfitLoss))
                             .font(.headline)
                             .fontWeight(.semibold)
-                            .foregroundColor(totalProfitLoss >= 0 ? .green : .red)
+                            .foregroundColor(totalProfitLoss >= 0 ? .red : .green)
                         Text(String(format: "%.2f%%", totalProfitLossPercentage))
                             .font(.caption)
-                            .foregroundColor(totalProfitLoss >= 0 ? .green : .red)
+                            .foregroundColor(totalProfitLoss >= 0 ? .red : .green)
                     }
                 }
             }
@@ -241,7 +241,20 @@ struct OverviewView: View {
     
     @ViewBuilder
     private func RecentRecordRow(record: GoldRecord) -> some View {
-        HStack {
+        HStack(spacing: 12) {
+            // 图片缩略图（如果有）
+            if let image = record.image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 50, height: 50)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color(.systemGray4), lineWidth: 1)
+                    )
+            }
+            
             VStack(alignment: .leading, spacing: 4) {
                 Text(record.name ?? "黄金首饰")
                     .font(.subheadline)
@@ -258,10 +271,10 @@ struct OverviewView: View {
                 Text(String(format: "¥%.2f", profitLoss))
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(profitLoss >= 0 ? .green : .red)
+                    .foregroundColor(profitLoss >= 0 ? .red : .green)
                 Text(String(format: "%.1f%%", record.profitLossPercentage(goldPrice: goldPriceService.currentPrice)))
                     .font(.caption)
-                    .foregroundColor(profitLoss >= 0 ? .green : .red)
+                    .foregroundColor(profitLoss >= 0 ? .red : .green)
             }
         }
         .padding(.vertical, 12)
